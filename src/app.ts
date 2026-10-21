@@ -5,6 +5,8 @@ import { registerErrorHandler } from './plugins/errorHandler';
 import { registerSwagger } from './plugins/swagger';
 import { authRoutes } from './modules/auth/auth.routes';
 import { eventsRoutes } from './modules/events/events.routes';
+import { holdsRoutes } from './modules/holds/holds.routes';
+import { bookingsRoutes } from './modules/bookings/bookings.routes';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -50,6 +52,8 @@ export async function buildApp(): Promise<FastifyInstance> {
     async (api) => {
       await api.register(authRoutes);
       await api.register(eventsRoutes);
+      await api.register(holdsRoutes);
+      await api.register(bookingsRoutes);
     },
     { prefix: '/api/v1' },
   );

@@ -2,11 +2,10 @@ import type { Event } from '@prisma/client';
 import { badRequest, conflict, forbidden, notFound } from '../../lib/errors';
 import type { AuthUser } from '../../lib/jwt';
 import { isUniqueViolation } from '../../lib/prisma';
+import type { SeatStatus } from '../../realtime/seatUpdates';
 import { holdStore } from '../holds/hold.store';
 import { eventsRepository } from './events.repository';
 import type { CreateEventInput, ListEventsQuery, SeatLayoutInput, UpdateEventInput } from './events.schemas';
-
-export type SeatStatus = 'AVAILABLE' | 'HELD' | 'BOOKED';
 
 /** Loads an event the given organiser owns, or throws 404/403. */
 async function getOwnedEvent(user: AuthUser, eventId: string): Promise<Event> {

@@ -6,12 +6,14 @@ import { buildApp } from '../src/app';
 import { prisma } from '../src/lib/prisma';
 import { redis } from '../src/lib/redis';
 import { signAccessToken } from '../src/lib/jwt';
+import { jobs } from '../src/jobs/queue';
 
 export { prisma, redis };
 
 export async function createTestApp(): Promise<FastifyInstance> {
   const app = await buildApp();
-  await app.ready();
+  // Listen on a real port so many parallel supertest requests share one server.
+  await app.listen({ port: 0, host: '127.0.0.1' });
   return app;
 }
 
@@ -64,6 +66,7 @@ export async function createPublishedEvent(organiserId: string, rows = 2, perRow
 
 export async function closeConnections(app?: FastifyInstance) {
   await app?.close();
+  await jobs.close();
   await prisma.$disconnect();
   redis.disconnect();
 }

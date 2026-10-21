@@ -50,6 +50,10 @@ export const eventsRepository = {
     return prisma.seat.createMany({ data: seats });
   },
 
+  findSeatsByIds(eventId: string, seatIds: string[]) {
+    return prisma.seat.findMany({ where: { eventId, id: { in: seatIds } }, orderBy: seatOrder });
+  },
+
   findSeats(eventId: string) {
     return prisma.seat.findMany({ where: { eventId }, orderBy: seatOrder });
   },
