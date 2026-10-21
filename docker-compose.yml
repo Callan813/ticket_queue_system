@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ticketing
+      POSTGRES_PASSWORD: ticketing
+      POSTGRES_DB: ticketing
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ticketing"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://ticketing:ticketing@postgres:5432/ticketing
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: change-me-jwt-secret-at-least-32-chars
+      QR_SECRET: change-me-qr-secret-at-least-32-chars!
+      PAYMENT_WEBHOOK_SECRET: change-me-webhook-secret-32-chars!!
+      MOCK_PAYMENTS_ENABLED: "true"
+      SEED_ON_START: "true"
+
+volumes:
+  pgdata:
