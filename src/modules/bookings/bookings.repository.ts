@@ -79,6 +79,28 @@ export const bookingsRepository = {
   },
 
   /**
+   * PENDING -> CONFIRMED and issue one ticket per seat, in one transaction.
+   * The status condition is part of the UPDATE, so a payment racing the
+   * payment-timeout job can't both confirm and cancel the same booking.
+   * Returns false if the booking was no longer PENDING.
+   */
+  confirmWithTickets(
+    bookingId: string,
+    paymentId: string,
+    tickets: { id: string; seatId: string; qrToken: string }[],
+  ) {
+    return prisma.$transaction(async (tx) => {
+      const { count } = await tx.booking.updateMany({
+        where: { id: bookingId, status: 'PENDING' },
+        data: { status: 'CONFIRMED', paymentId },
+      });
+      if (count === 0) return false;
+      await tx.ticket.createMany({ data: tickets.map((t) => ({ ...t, bookingId })) });
+      return true;
+    });
+  },
+
+  /**
    * Cancels a booking if it is still in one of `fromStatuses`, and frees its seats.
    * The status check is part of the UPDATE, so two concurrent cancels (or a
    * cancel racing a payment) can't both win. Returns the freed seat ids, or

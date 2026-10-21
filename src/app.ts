@@ -7,6 +7,9 @@ import { authRoutes } from './modules/auth/auth.routes';
 import { eventsRoutes } from './modules/events/events.routes';
 import { holdsRoutes } from './modules/holds/holds.routes';
 import { bookingsRoutes } from './modules/bookings/bookings.routes';
+import { ticketsRoutes } from './modules/tickets/tickets.routes';
+import { paymentsRoutes } from './modules/payments/payments.routes';
+import { attachSocketServer } from './realtime/socket';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -54,9 +57,13 @@ export async function buildApp(): Promise<FastifyInstance> {
       await api.register(eventsRoutes);
       await api.register(holdsRoutes);
       await api.register(bookingsRoutes);
+      await api.register(ticketsRoutes);
+      await api.register(paymentsRoutes);
     },
     { prefix: '/api/v1' },
   );
+
+  await attachSocketServer(app);
 
   return app;
 }

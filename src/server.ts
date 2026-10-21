@@ -3,10 +3,13 @@ import { config } from './config';
 import { logger } from './lib/logger';
 import { prisma } from './lib/prisma';
 import { redis } from './lib/redis';
+import { jobs } from './jobs/queue';
+import { startWorker } from './jobs/worker';
 
 async function main() {
   const app = await buildApp();
   await app.listen({ port: config.PORT, host: '0.0.0.0' });
+  const worker = config.RUN_WORKER ? startWorker() : null;
 
   // Graceful shutdown: stop accepting connections, let in-flight requests
   // finish, then close the DB and Redis connections.
@@ -21,6 +24,8 @@ async function main() {
     }, 10_000).unref();
     try {
       await app.close();
+      await worker?.close();
+      await jobs.close();
       await prisma.$disconnect();
       redis.disconnect();
       clearTimeout(forceExit);

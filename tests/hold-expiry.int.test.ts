@@ -1,4 +1,4 @@
-import './env/short-hold-ttl'; // HOLD_TTL_SECONDS=1 — must be the first import
+import './env/fast-timers'; // 1-second hold TTL — must be the first import
 import type { FastifyInstance } from 'fastify';
 import { api, closeConnections, createPublishedEvent, createTestApp, createUser, resetState } from './helpers';
 
