@@ -62,7 +62,7 @@ describe('Platform: rate limiting, docs, demo, seed', () => {
   it('serves the demo page', async () => {
     const res = await api(app).get('/demo').expect(200);
     expect(res.headers['content-type']).toContain('text/html');
-    expect(res.text).toContain('Seat Booking Demo');
+    expect(res.text).toContain('Odyssey');
   });
 
   it('seeds 1 organiser, 3 attendees and 2 events with 50 seats each, idempotently', async () => {

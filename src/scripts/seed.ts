@@ -4,20 +4,20 @@ import { prisma } from '../lib/prisma';
 
 export const DEMO_PASSWORD = 'password123';
 
-const ORGANISER = { name: 'Priya (Organiser)', email: 'organiser@demo.dev' };
+const ORGANISER = { name: 'Odyssey Organising Committee', email: 'organiser@demo.dev' };
 const ATTENDEES = [
   { name: 'Alice', email: 'alice@demo.dev' },
   { name: 'Bob', email: 'bob@demo.dev' },
   { name: 'Carol', email: 'carol@demo.dev' },
 ];
 
-/** Rows A-B are VIP, C-E standard, 10 seats each = 50 seats. Prices in paise. */
+/** Rows A-B are the Fan Pit, C-E General, 10 seats each = 50 seats. Prices in paise. */
 function seatLayout() {
   return ['A', 'B', 'C', 'D', 'E'].flatMap((row) =>
     Array.from({ length: 10 }, (_, i) => ({
       row,
       number: i + 1,
-      tier: row <= 'B' ? 'VIP' : 'STANDARD',
+      tier: row <= 'B' ? 'Fan Pit' : 'General',
       price: row <= 'B' ? 150000 : 50000,
     })),
   );
@@ -41,14 +41,14 @@ export async function seedDemoData() {
 
   const events = [
     {
-      title: 'TechFest 2026: Opening Keynote',
-      description: 'The college tech fest kicks off with a keynote and live demos.',
-      venue: 'Main Auditorium',
+      title: 'Odyssey Pronite: The Grand Finale Concert',
+      description: 'Odyssey 2026 closes with a headline concert under the stars.',
+      venue: 'Open Air Theatre',
       startsAt: daysFromNow(30),
     },
     {
-      title: 'Hackathon Finals Showcase',
-      description: 'Top 10 teams demo their 36-hour builds. Judges pick the winners live.',
+      title: 'Odyssey Hack: Finals Showcase',
+      description: 'The top 10 teams demo their 36-hour builds, and the judges pick the winners live.',
       venue: 'Innovation Hall',
       startsAt: daysFromNow(45),
     },
