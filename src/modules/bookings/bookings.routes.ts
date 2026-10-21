@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { requireRole } from '../../plugins/auth';
+import { bookingRateLimit } from '../../plugins/limits';
 import { toOpenApi, uuidParam } from '../../lib/validation';
 import { createBookingBody, idempotencyHeaders } from './bookings.schemas';
 import { bookingsController } from './bookings.controller';
@@ -18,7 +19,7 @@ export async function bookingsRoutes(app: FastifyInstance) {
         headers: toOpenApi(idempotencyHeaders),
         body: toOpenApi(createBookingBody),
       },
-      preHandler: requireRole('ATTENDEE'),
+      preHandler: [requireRole('ATTENDEE'), bookingRateLimit],
     },
     bookingsController.create,
   );

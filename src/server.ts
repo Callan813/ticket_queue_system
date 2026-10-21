@@ -5,8 +5,11 @@ import { prisma } from './lib/prisma';
 import { redis } from './lib/redis';
 import { jobs } from './jobs/queue';
 import { startWorker } from './jobs/worker';
+import { seedDemoData } from './scripts/seed';
 
 async function main() {
+  if (config.SEED_ON_START) await seedDemoData();
+
   const app = await buildApp();
   await app.listen({ port: config.PORT, host: '0.0.0.0' });
   const worker = config.RUN_WORKER ? startWorker() : null;

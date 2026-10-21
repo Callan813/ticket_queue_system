@@ -32,6 +32,8 @@ export function startWorker() {
 
   worker.on('completed', (job, result) => logger.info({ jobId: job.id, job: job.name, result }, 'Job completed'));
   worker.on('failed', (job, err) => logger.error({ jobId: job?.id, job: job?.name, err }, 'Job failed'));
+  // Without an 'error' listener, Node treats connection hiccups as unhandled errors.
+  worker.on('error', (err) => logger.error({ err }, 'Worker error'));
 
   logger.info('Job worker started');
   return {

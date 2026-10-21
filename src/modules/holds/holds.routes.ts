@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { requireRole } from '../../plugins/auth';
+import { bookingRateLimit } from '../../plugins/limits';
 import { toOpenApi, uuidParam } from '../../lib/validation';
 import { createHoldBody, holdIdParam } from './holds.schemas';
 import { holdsController } from './holds.controller';
@@ -18,7 +19,7 @@ export async function holdsRoutes(app: FastifyInstance) {
         params: toOpenApi(uuidParam),
         body: toOpenApi(createHoldBody),
       },
-      preHandler: requireRole('ATTENDEE'),
+      preHandler: [requireRole('ATTENDEE'), bookingRateLimit],
     },
     holdsController.create,
   );

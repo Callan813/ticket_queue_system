@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { loggerOptions } from './lib/logger';
 import { registerErrorHandler } from './plugins/errorHandler';
@@ -50,6 +52,11 @@ export async function buildApp(): Promise<FastifyInstance> {
   await registerSwagger(app);
 
   app.get('/health', { schema: { hide: true } }, async () => ({ status: 'ok' }));
+
+  // Static demo page (seat map). Read once at startup; it's a single self-contained file.
+  const demoHtml = readFileSync(path.join(process.cwd(), 'public', 'demo.html'), 'utf8');
+  app.get('/demo', { schema: { hide: true } }, (_request, reply) => reply.type('text/html').send(demoHtml));
+  app.get('/', { schema: { hide: true } }, (_request, reply) => reply.redirect('/demo'));
 
   await app.register(
     async (api) => {

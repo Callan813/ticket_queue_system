@@ -21,5 +21,6 @@ COPY prisma ./prisma
 COPY public ./public
 COPY package.json ./
 EXPOSE 3000
-# Apply migrations, then start. Migrations are idempotent, so restarts are safe.
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+# Apply migrations (idempotent, so restarts are safe), then start.
+# `exec` makes node PID 1 so it receives SIGTERM from `docker stop` and shuts down gracefully.
+CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && exec node dist/server.js"]

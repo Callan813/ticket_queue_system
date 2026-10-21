@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Seat Booking Demo</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #6b7280; --border: #e3e6eb;
+    --accent: #2563eb; --accent-text: #ffffff;
+    --available: #16a34a; --held: #9ca3af; --booked: #4b5563; --danger: #dc2626; --ok: #15803d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --panel: #1b2029; --text: #e7eaf0; --muted: #9aa3b2; --border: #2b3240;
+      --accent: #3b82f6; --available: #22c55e; --held: #6b7280; --booked: #374151;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+  header { padding: 16px; border-bottom: 1px solid var(--border); background: var(--panel); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+  h1 { font-size: 18px; margin: 0; }
+  .hint { color: var(--muted); font-size: 13px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; }
+  @media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr); } }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .panel h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 12px; }
+  select, button { font: inherit; border-radius: 8px; border: 1px solid var(--border); padding: 7px 12px; background: var(--panel); color: var(--text); }
+  button { cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .row-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+  .stage { text-align: center; padding: 6px; margin: 4px auto 18px; max-width: 70%; border-radius: 0 0 40px 40px; background: var(--border); color: var(--muted); font-size: 12px; letter-spacing: .3em; }
+  .seatmap { overflow-x: auto; padding-bottom: 4px; }
+  .seat-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; justify-content: center; min-width: max-content; }
+  .row-label { width: 18px; color: var(--muted); font-size: 12px; text-align: center; }
+  .seat { width: 34px; height: 30px; padding: 0; font-size: 12px; border-radius: 6px 6px 3px 3px; border: 2px solid var(--available); background: transparent; color: var(--text); transition: background .25s, border-color .25s, transform .15s; }
+  .seat.vip { border-style: double; border-width: 3px; }
+  .seat.selected { background: color-mix(in srgb, var(--accent) 25%, transparent); border-color: var(--accent); }
+  .seat.mine { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .seat.held { background: var(--held); border-color: var(--held); color: #fff; cursor: not-allowed; }
+  .seat.booked { background: var(--booked); border-color: var(--booked); color: #cbd2dc; cursor: not-allowed; }
+  .seat.flash { animation: flash .8s; }
+  @keyframes flash { 0% { transform: scale(1.25); box-shadow: 0 0 0 4px var(--danger); } 100% { transform: scale(1); box-shadow: none; } }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; font-size: 13px; color: var(--muted); }
+  .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; border: 2px solid var(--available); }
+  .legend .l-mine::before { background: var(--accent); border-color: var(--accent); }
+  .legend .l-held::before { background: var(--held); border-color: var(--held); }
+  .legend .l-booked::before { background: var(--booked); border-color: var(--booked); }
+
+  .checkout p { margin: 6px 0; }
+  .big { font-size: 22px; font-weight: 600; }
+  .countdown { font-variant-numeric: tabular-nums; }
+  .tickets { display: grid; gap: 10px; margin-top: 10px; }
+  .ticket { border: 1px dashed var(--border); border-radius: 8px; padding: 10px; display: flex; gap: 10px; align-items: center; }
+  .ticket img { width: 92px; height: 92px; background: #fff; border-radius: 4px; }
+  .log { list-style: none; padding: 0; margin: 0; max-height: 260px; overflow-y: auto; font-size: 13px; }
+  .log li { padding: 4px 0; border-bottom: 1px solid var(--border); }
+  .log time { color: var(--muted); margin-right: 6px; font-variant-numeric: tabular-nums; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); max-width: calc(100% - 32px); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .toast.error { background: var(--danger); color: #fff; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; }
+  .badge.PENDING { background: #fef3c7; color: #92400e; } .badge.CONFIRMED { background: #dcfce7; color: #166534; } .badge.CANCELLED { background: #fee2e2; color: #991b1b; }
+  .side { display: grid; gap: 16px; align-content: start; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🎟️ Seat Booking Demo</h1>
+    <div class="hint">Open this page in two windows as different users and click the same seat. One wins, and the other sees it go grey instantly.</div>
+  </div>
+  <div class="row-controls">
+    <label>User <select id="user"></select></label>
+    <label>Event <select id="event"></select></label>
+    <span id="conn" class="hint">● connecting…</span>
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <h2 id="event-title">Seat map</h2>
+    <div class="stage">STAGE</div>
+    <div class="seatmap" id="seatmap"></div>
+    <div class="legend">
+      <span>Available</span><span class="l-mine">Yours</span><span class="l-held">Held by someone</span><span class="l-booked">Booked</span>
+      <span style="border:0">Double border = VIP</span>
+    </div>
+  </section>
+
+  <div class="side">
+    <section class="panel checkout" id="checkout"></section>
+    <section class="panel">
+      <h2>Live activity</h2>
+      <ul class="log" id="log"></ul>
+    </section>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const API = '/api/v1';
+const DEMO_PASSWORD = 'password123';
+const USERS = ['alice@demo.dev', 'bob@demo.dev', 'carol@demo.dev'];
+
+const state = {
+  token: null, user: null, eventId: null,
+  seats: new Map(),        // seatId -> seat (with .status)
+  selected: new Set(),     // seatIds picked but not yet held
+  hold: null,              // { holdId, seats, expiresAt, totalAmount, idempotencyKey }
+  booking: null, tickets: [], timer: null,
+};
+
+const $ = (id) => document.getElementById(id);
+const esc = (text) => String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const money = (paise) => (paise / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+const seatName = (id) => { const s = state.seats.get(id); return s ? `${s.row}${s.number}` : '?'; };
+const newKey = () => (crypto.randomUUID ? crypto.randomUUID() : `k-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
+async function call(method, path, body, { token = state.token, headers = {} } = {}) {
+  const res = await fetch(API + path, {
+    method,
+    headers: { ...(body ? { 'content-type': 'application/json' } : {}), ...(token ? { authorization: `Bearer ${token}` } : {}), ...headers },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = res.status === 204 ? null : await res.json().catch(() => null);
+  if (!res.ok) {
+    const err = new Error(data?.error?.message || res.statusText);
+    Object.assign(err, { status: res.status, code: data?.error?.code, details: data?.error?.details });
+    throw err;
+  }
+  return data;
+}
+
+let toastTimer;
+function toast(message, isError = false) {
+  const el = $('toast');
+  el.textContent = message;
+  el.className = `toast show${isError ? ' error' : ''}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (el.className = 'toast'), 3500);
+}
+
+function log(message) {
+  const li = document.createElement('li');
+  li.innerHTML = `<time>${new Date().toLocaleTimeString()}</time>`;
+  li.append(message);
+  $('log').prepend(li);
+}
+
+// ---------- seat map ----------
+function seatClass(seat) {
+  if (state.hold?.seats.some((s) => s.id === seat.id) && seat.status === 'HELD') return 'mine';
+  if (state.booking?.seats.some((s) => s.id === seat.id) && seat.status === 'BOOKED') return 'mine';
+  if (seat.status === 'HELD') return 'held';
+  if (seat.status === 'BOOKED') return 'booked';
+  return state.selected.has(seat.id) ? 'selected' : '';
+}
+
+function renderSeats() {
+  const rows = new Map();
+  for (const seat of state.seats.values()) {
+    if (!rows.has(seat.row)) rows.set(seat.row, []);
+    rows.get(seat.row).push(seat);
+  }
+  const map = $('seatmap');
+  map.innerHTML = '';
+  for (const [row, seats] of rows) {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'seat-row';
+    rowEl.innerHTML = `<span class="row-label">${row}</span>`;
+    for (const seat of seats) {
+      const btn = document.createElement('button');
+      btn.id = `seat-${seat.id}`;
+      btn.className = `seat ${seat.tier === 'VIP' ? 'vip' : ''} ${seatClass(seat)}`;
+      btn.textContent = seat.number;
+      btn.title = `${seat.row}${seat.number} · ${seat.tier} · ${money(seat.price)} · ${seat.status}`;
+      btn.onclick = () => toggleSeat(seat.id);
+      rowEl.append(btn);
+    }
+    rowEl.insertAdjacentHTML('beforeend', `<span class="row-label">${row}</span>`);
+    map.append(rowEl);
+  }
+}
+
+function toggleSeat(seatId) {
+  const seat = state.seats.get(seatId);
+  if (!state.token) return toast('Pick a user first', true);
+  if (state.hold || state.booking?.status === 'PENDING') return toast('Finish or release your current hold first');
+  if (seat.status !== 'AVAILABLE') return;
+  state.selected.has(seatId) ? state.selected.delete(seatId) : state.selected.add(seatId);
+  renderSeats();
+  renderCheckout();
+}
+
+function flash(seatId) {
+  const el = $(`seat-${seatId}`);
+  if (!el) return;
+  el.classList.remove('flash');
+  void el.offsetWidth; // restart the animation
+  el.classList.add('flash');
+}
+
+async function loadSeats() {
+  const { seats } = await call('GET', `/events/${state.eventId}/seats`);
+  state.seats = new Map(seats.map((s) => [s.id, s]));
+  renderSeats();
+}
+
+// ---------- checkout panel ----------
+function renderCheckout() {
+  const el = $('checkout');
+  clearInterval(state.timer);
+
+  if (state.booking) {
+    const b = state.booking;
+    el.innerHTML = `<h2>Your booking</h2>
+      <p><span class="badge ${b.status}">${b.status}</span></p>
+      <p>Seats: <b>${b.seats.map((s) => s.row + s.number).join(', ')}</b></p>
+      <p class="big">${money(b.totalAmount)}</p>`;
+    if (b.status === 'PENDING') {
+      el.insertAdjacentHTML('beforeend', `<p class="hint">Seats are locked in the database. Pay before ${new Date(b.paymentDueBy).toLocaleTimeString()} or they are released.</p>
+        <div class="row-controls"><button class="primary" id="pay">Pay (mock)</button><button id="cancel">Cancel</button></div>`);
+      $('pay').onclick = pay;
+      $('cancel').onclick = cancelBooking;
+    } else if (b.status === 'CONFIRMED') {
+      el.insertAdjacentHTML('beforeend', `<div class="tickets">${state.tickets.map((t) => `
+        <div class="ticket"><img src="${t.qrCodeDataUrl}" alt="QR code for seat ${t.seat.row}${t.seat.number}">
+          <div><b>Seat ${t.seat.row}${t.seat.number}</b> <span class="hint">${esc(t.seat.tier)}</span><br>
+          <button data-token="${t.qrToken}" class="scan">Scan at gate</button></div></div>`).join('')}</div>
+        <p class="hint">"Scan at gate" logs in as the organiser and checks the ticket in. Scan twice to see reuse rejected.</p>
+        <button id="again">Book more seats</button>`);
+      el.querySelectorAll('.scan').forEach((btn) => (btn.onclick = () => scan(btn.dataset.token)));
+      $('again').onclick = () => { state.booking = null; state.tickets = []; renderSeats(); renderCheckout(); };
+    } else {
+      el.insertAdjacentHTML('beforeend', `<button id="again">Start over</button>`);
+      $('again').onclick = () => { state.booking = null; renderSeats(); renderCheckout(); };
+    }
+    return;
+  }
+
+  if (state.hold) {
+    const h = state.hold;
+    el.innerHTML = `<h2>Seats held for you</h2>
+      <p>Seats: <b>${h.seats.map((s) => s.row + s.number).join(', ')}</b></p>
+      <p class="big">${money(h.totalAmount)}</p>
+      <p>Expires in <b class="countdown" id="countdown"></b></p>
+      <div class="row-controls"><button class="primary" id="book">Confirm booking</button><button id="release">Release</button></div>`;
+    $('book').onclick = book;
+    $('release').onclick = release;
+    const tick = () => {
+      const left = Math.max(0, Math.round((new Date(h.expiresAt) - Date.now()) / 1000));
+      $('countdown').textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+      if (left === 0) { state.hold = null; toast('Your hold expired'); renderSeats(); renderCheckout(); }
+    };
+    tick();
+    state.timer = setInterval(tick, 1000);
+    return;
+  }
+
+  const picked = [...state.selected].map((id) => state.seats.get(id));
+  el.innerHTML = `<h2>Checkout</h2>
+    <p>${picked.length ? `Selected: <b>${picked.map((s) => s.row + s.number).join(', ')}</b>` : '<span class="hint">Click available seats to select them.</span>'}</p>
+    <p class="big">${money(picked.reduce((sum, s) => sum + s.price, 0))}</p>
+    <button class="primary" id="hold" ${picked.length ? '' : 'disabled'}>Hold seats</button>`;
+  $('hold').onclick = hold;
+}
+
+// ---------- actions ----------
+async function hold() {
+  const seatIds = [...state.selected];
+  try {
+    const { hold } = await call('POST', `/events/${state.eventId}/holds`, { seatIds });
+    state.hold = { ...hold, idempotencyKey: newKey() };
+    state.selected.clear();
+    toast(`Held ${hold.seats.length} seat(s). You have ${Math.round((new Date(hold.expiresAt) - Date.now()) / 60000)} minutes.`);
+  } catch (err) {
+    if (err.code === 'SEATS_UNAVAILABLE') {
+      const taken = err.details.seatIds;
+      toast(`Too slow! ${taken.map(seatName).join(', ')} just got taken.`, true);
+      taken.forEach((id) => { state.selected.delete(id); flash(id); });
+      await loadSeats();
+    } else toast(err.message, true);
+  }
+  renderSeats();
+  renderCheckout();
+}
+
+async function release() {
+  await call('DELETE', `/holds/${state.hold.holdId}`).catch((err) => toast(err.message, true));
+  state.hold = null;
+  renderSeats();
+  renderCheckout();
+}
+
+async function book() {
+  try {
+    // The same Idempotency-Key is reused if you click twice, so you can't book twice.
+    const { booking } = await call('POST', '/bookings', { holdId: state.hold.holdId }, { headers: { 'Idempotency-Key': state.hold.idempotencyKey } });
+    state.booking = booking;
+    state.hold = null;
+  } catch (err) {
+    toast(err.message, true);
+    if (err.code === 'HOLD_EXPIRED') state.hold = null;
+  }
+  renderSeats();
+  renderCheckout();
+}
+
+async function pay() {
+  try {
+    await call('POST', '/payments/mock-checkout', { bookingId: state.booking.id });
+    const [{ bookings }, { tickets }] = await Promise.all([
+      call('GET', '/bookings/me'),
+      call('GET', `/bookings/${state.booking.id}/tickets`),
+    ]);
+    state.booking = bookings.find((b) => b.id === state.booking.id);
+    state.tickets = tickets;
+    toast('Payment confirmed. Your tickets are ready.');
+  } catch (err) { toast(err.message, true); }
+  renderCheckout();
+}
+
+async function cancelBooking() {
+  try {
+    const { booking } = await call('POST', `/bookings/${state.booking.id}/cancel`);
+    state.booking = booking;
+  } catch (err) { toast(err.message, true); }
+  renderSeats();
+  renderCheckout();
+}
+
+let organiserToken = null;
+async function scan(qrToken) {
+  try {
+    organiserToken ??= (await call('POST', '/auth/login', { email: 'organiser@demo.dev', password: DEMO_PASSWORD }, { token: null })).token;
+    const { checkIn } = await call('POST', '/tickets/verify', { qrToken }, { token: organiserToken });
+    toast(`✅ Welcome ${checkIn.attendee}: seat ${checkIn.seat.row}${checkIn.seat.number}`);
+    log(`Gate: ticket for ${checkIn.seat.row}${checkIn.seat.number} checked in`);
+  } catch (err) {
+    toast(`⛔ ${err.message}`, true);
+    log(`Gate: scan rejected (${err.code})`);
+  }
+}
+
+// ---------- live updates ----------
+const socket = io({ transports: ['websocket'] });
+socket.on('connect', () => {
+  $('conn').textContent = '● live';
+  $('conn').style.color = 'var(--available)';
+  if (state.eventId) socket.emit('join-event', state.eventId);
+});
+socket.on('disconnect', () => { $('conn').textContent = '● offline'; $('conn').style.color = 'var(--danger)'; });
+socket.on('seat-update', ({ eventId, seats }) => {
+  if (eventId !== state.eventId) return;
+  for (const { seatId, status } of seats) {
+    const seat = state.seats.get(seatId);
+    if (!seat || seat.status === status) continue;
+    seat.status = status;
+    log(`${seatName(seatId)} → ${status}`);
+    if (status !== 'AVAILABLE' && state.selected.delete(seatId)) {
+      toast(`Someone just grabbed ${seatName(seatId)}`, true);
+      setTimeout(() => flash(seatId));
+    }
+  }
+  renderSeats();
+  if (!state.hold && !state.booking) renderCheckout();
+});
+
+// ---------- setup ----------
+async function login(email) {
+  const { token, user } = await call('POST', '/auth/login', { email, password: DEMO_PASSWORD }, { token: null });
+  Object.assign(state, { token, user, hold: null, booking: null, tickets: [] });
+  state.selected.clear();
+  log(`Logged in as ${user.name}`);
+  renderSeats();
+  renderCheckout();
+}
+
+async function selectEvent(eventId) {
+  if (state.eventId) socket.emit('leave-event', state.eventId);
+  Object.assign(state, { eventId, hold: null, booking: null, tickets: [] });
+  state.selected.clear();
+  socket.emit('join-event', eventId);
+  $('event-title').textContent = $('event').selectedOptions[0].textContent;
+  await loadSeats();
+  renderCheckout();
+}
+
+async function init() {
+  // Different default user per window, so two windows race as different people.
+  const params = new URLSearchParams(location.search);
+  const defaultUser = params.get('user') || USERS[Math.floor(Math.random() * USERS.length)];
+  $('user').innerHTML = USERS.map((u) => `<option ${u === defaultUser ? 'selected' : ''}>${u}</option>`).join('');
+  $('user').onchange = (e) => login(e.target.value).catch((err) => toast(err.message, true));
+
+  const { data: events } = await call('GET', '/events');
+  if (!events.length) { $('seatmap').textContent = 'No published events. Run the seed script.'; return; }
+  $('event').innerHTML = events.map((e) => `<option value="${e.id}">${esc(e.title)}</option>`).join('');
+  $('event').onchange = (e) => selectEvent(e.target.value);
+
+  await login($('user').value);
+  await selectEvent(events[0].id);
+}
+
+init().catch((err) => toast(err.message, true));
+</script>
+</body>
+</html>
