@@ -4,6 +4,7 @@ import { loggerOptions } from './lib/logger';
 import { registerErrorHandler } from './plugins/errorHandler';
 import { registerSwagger } from './plugins/swagger';
 import { authRoutes } from './modules/auth/auth.routes';
+import { eventsRoutes } from './modules/events/events.routes';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -48,6 +49,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(
     async (api) => {
       await api.register(authRoutes);
+      await api.register(eventsRoutes);
     },
     { prefix: '/api/v1' },
   );
